@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { BetFeed } from '@/components/betting/BetFeed'
 import { CreateLineForm } from '@/components/betting/CreateLineForm'
 import { Button } from '@/components/ui/button'
@@ -16,21 +16,30 @@ interface HomeClientProps {
 export function HomeClient({ initialLines, currentUser }: HomeClientProps) {
   const [showCreate, setShowCreate] = useState(false)
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
+  const [lines, setLines] = useState<LineWithBets[]>(initialLines)
+
+  const refreshLines = useCallback(async () => {
+    const res = await fetch('/api/lines')
+    if (res.ok) setLines(await res.json())
+  }, [])
 
   const handleCreateLine = async (data: CreateLineInput) => {
     if (!currentUser) return
     await createLine(data, currentUser.id)
     setShowCreate(false)
+    await refreshLines()
   }
 
   const handleBet = async (lineId: string, side: BetSide) => {
     if (!currentUser) return
     await placeBet(lineId, currentUser.id, side)
+    await refreshLines()
   }
 
   const handleResolve = async (lineId: string, outcome: BetSide) => {
     if (!currentUser) return
     await resolveLine(lineId, outcome, currentUser.id)
+    await refreshLines()
   }
 
   const handleCreateInvite = async () => {
@@ -106,10 +115,11 @@ export function HomeClient({ initialLines, currentUser }: HomeClientProps) {
             )}
 
             <BetFeed
-              initialLines={initialLines}
+              lines={lines}
               currentUser={currentUser}
               onBet={handleBet}
               onResolve={handleResolve}
+              onLinesUpdate={setLines}
             />
           </>
         )}

@@ -1,22 +1,26 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { useLineUpdates } from '@/lib/supabase/realtime'
 import type { BetSide, LineWithBets, User } from '@/types'
 import { BetLineCard } from './BetLineCard'
 
 interface BetFeedProps {
-  initialLines: LineWithBets[]
+  lines: LineWithBets[]
   currentUser: User | null
   onBet: (lineId: string, side: BetSide) => Promise<void>
   onResolve: (lineId: string, outcome: BetSide) => Promise<void>
+  onLinesUpdate: (lines: LineWithBets[]) => void
 }
 
-export function BetFeed({ initialLines, currentUser, onBet, onResolve }: BetFeedProps) {
-  const [lines, setLines] = useState<LineWithBets[]>(initialLines)
-
-  const handleUpdate = useCallback((updated: LineWithBets[]) => setLines(updated), [])
+export function BetFeed({ lines, currentUser, onBet, onResolve, onLinesUpdate }: BetFeedProps) {
+  const handleUpdate = useCallback((updated: LineWithBets[]) => onLinesUpdate(updated), [onLinesUpdate])
   useLineUpdates(handleUpdate)
+
+  const refresh = useCallback(async () => {
+    const res = await fetch('/api/lines')
+    if (res.ok) onLinesUpdate(await res.json())
+  }, [onLinesUpdate])
 
   if (lines.length === 0) {
     return (
@@ -35,6 +39,7 @@ export function BetFeed({ initialLines, currentUser, onBet, onResolve }: BetFeed
           currentUser={currentUser}
           onBet={onBet}
           onResolve={onResolve}
+          onRefresh={refresh}
         />
       ))}
     </div>

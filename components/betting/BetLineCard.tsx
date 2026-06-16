@@ -14,9 +14,10 @@ interface BetLineCardProps {
   currentUser: User | null
   onBet: (lineId: string, side: BetSide) => Promise<void>
   onResolve: (lineId: string, outcome: BetSide) => Promise<void>
+  onRefresh: () => Promise<void>
 }
 
-export function BetLineCard({ line, currentUser, onBet, onResolve }: BetLineCardProps) {
+export function BetLineCard({ line, currentUser, onBet, onResolve, onRefresh }: BetLineCardProps) {
   const [pending, setPending] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -55,7 +56,7 @@ export function BetLineCard({ line, currentUser, onBet, onResolve }: BetLineCard
   const handleCloseEarly = async () => {
     setPending('close-early')
     setError(null)
-    try { await closeLineEarly(line.id) } catch (err) {
+    try { await closeLineEarly(line.id); await onRefresh() } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to close.')
     } finally { setPending(null) }
   }
@@ -64,7 +65,7 @@ export function BetLineCard({ line, currentUser, onBet, onResolve }: BetLineCard
     if (!currentUser) return
     setPending('delete')
     setError(null)
-    try { await deleteLine(line.id, currentUser.id) } catch (err) {
+    try { await deleteLine(line.id, currentUser.id); await onRefresh() } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete.')
     } finally { setPending(null) }
   }
