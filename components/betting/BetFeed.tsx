@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
+import { getLines } from '@/app/actions'
 import { useLineUpdates } from '@/lib/supabase/realtime'
 import type { BetSide, LineWithBets, User } from '@/types'
 import { BetLineCard } from './BetLineCard'
@@ -18,8 +19,8 @@ export function BetFeed({ lines, currentUser, onBet, onResolve, onLinesUpdate }:
   useLineUpdates(handleUpdate)
 
   const refresh = useCallback(async () => {
-    const res = await fetch('/api/lines')
-    if (res.ok) onLinesUpdate(await res.json())
+    const fresh = await getLines()
+    onLinesUpdate(fresh)
   }, [onLinesUpdate])
 
   if (lines.length === 0) {

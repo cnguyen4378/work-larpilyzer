@@ -5,7 +5,7 @@ import { BetFeed } from '@/components/betting/BetFeed'
 import { CreateLineForm } from '@/components/betting/CreateLineForm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { createLine, createInviteLink, placeBet, resolveLine } from '@/app/actions'
+import { createLine, createInviteLink, getLines, placeBet, resolveLine } from '@/app/actions'
 import type { BetSide, CreateLineInput, LineWithBets, User } from '@/types'
 
 interface HomeClientProps {
@@ -19,8 +19,8 @@ export function HomeClient({ initialLines, currentUser }: HomeClientProps) {
   const [lines, setLines] = useState<LineWithBets[]>(initialLines)
 
   const refreshLines = useCallback(async () => {
-    const res = await fetch('/api/lines')
-    if (res.ok) setLines(await res.json())
+    const fresh = await getLines()
+    setLines(fresh)
   }, [])
 
   const handleCreateLine = async (data: CreateLineInput) => {
