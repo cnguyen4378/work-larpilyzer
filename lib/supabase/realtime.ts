@@ -18,9 +18,8 @@ export function useLineUpdates(onUpdate: (lines: LineWithBets[]) => void): void 
     }
 
     const channel = supabase
-      .channel('db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lines' }, handleChange)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, handleChange)
+      .channel('app-updates')
+      .on('broadcast', { event: 'data-changed' }, handleChange)
       .subscribe()
 
     return () => {

@@ -17,6 +17,20 @@ import {
 } from '@/lib/supabase/db'
 import type { Bet, BetSide, CreateLineInput, InviteLink, Line, LineWithBets, User } from '@/types'
 
+async function broadcastUpdate(): Promise<void> {
+  await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/realtime/v1/api/broadcast`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+    },
+    body: JSON.stringify({
+      messages: [{ topic: 'realtime:app-updates', event: 'data-changed', payload: {} }],
+    }),
+  })
+}
+
 async function getAuthenticatedUserId(): Promise<string> {
   const cookieStore = await cookies()
   const userId = cookieStore.get('user_id')?.value
@@ -58,19 +72,25 @@ export async function joinViaInvite(token: string, username: string): Promise<Us
 export async function createLine(data: CreateLineInput, userId: string): Promise<Line> {
   const authedId = await getAuthenticatedUserId()
   if (authedId !== userId) throw new Error('Not authenticated.')
-  return dbCreateLine(createServiceRoleClient(), data, authedId)
+  const line = await dbCreateLine(createServiceRoleClient(), data, authedId)
+  void broadcastUpdate()
+  return line
 }
 
 export async function placeBet(lineId: string, userId: string, side: BetSide): Promise<Bet> {
   const authedId = await getAuthenticatedUserId()
   if (authedId !== userId) throw new Error('Not authenticated.')
-  return dbPlaceBet(createServiceRoleClient(), lineId, authedId, side)
+  const bet = await dbPlaceBet(createServiceRoleClient(), lineId, authedId, side)
+  void broadcastUpdate()
+  return bet
 }
 
 export async function resolveLine(lineId: string, outcome: BetSide, resolvedBy: string): Promise<Line> {
   const authedId = await getAuthenticatedUserId()
   if (authedId !== resolvedBy) throw new Error('Not authenticated.')
-  return dbResolveLine(createServiceRoleClient(), lineId, outcome, authedId)
+  const line = await dbResolveLine(createServiceRoleClient(), lineId, outcome, authedId)
+  void broadcastUpdate()
+  return line
 }
 
 export async function getLines(): Promise<LineWithBets[]> {
@@ -90,13 +110,16 @@ export async function loginByUsername(username: string): Promise<User> {
 
 export async function closeLineEarly(lineId: string): Promise<Line> {
   await getAuthenticatedUserId()
-  return dbCloseLineEarly(createServiceRoleClient(), lineId)
+  const line = await dbCloseLineEarly(createServiceRoleClient(), lineId)
+  void broadcastUpdate()
+  return line
 }
 
 export async function deleteLine(lineId: string, userId: string): Promise<void> {
   const authedId = await getAuthenticatedUserId()
   if (authedId !== userId) throw new Error('Not authenticated.')
-  return dbDeleteLine(createServiceRoleClient(), lineId)
+  await dbDeleteLine(createServiceRoleClient(), lineId)
+  void broadcastUpdate()
 }
 
 export async function createInviteLink(userId: string): Promise<InviteLink> {

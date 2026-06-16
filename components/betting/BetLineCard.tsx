@@ -95,7 +95,7 @@ export function BetLineCard({ line, currentUser, onBet, onResolve, onRefresh }: 
                 {line.resolvedOutcome?.toUpperCase()} WON
               </Badge>
             ) : (
-              <CountdownTimer closesAt={line.closesAt} />
+              <CountdownTimer closesAt={line.closesAt} onExpire={onRefresh} />
             )}
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { BetFeed } from '@/components/betting/BetFeed'
 import { CreateLineForm } from '@/components/betting/CreateLineForm'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,11 @@ export function HomeClient({ initialLines, currentUser }: HomeClientProps) {
     const fresh = await getLines()
     setLines(fresh)
   }, [])
+
+  useEffect(() => {
+    const interval = setInterval(refreshLines, 30_000)
+    return () => clearInterval(interval)
+  }, [refreshLines])
 
   const handleCreateLine = async (data: CreateLineInput) => {
     if (!currentUser) return

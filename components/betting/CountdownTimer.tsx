@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 function formatMs(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000)
@@ -13,11 +13,22 @@ function formatMs(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
-export function CountdownTimer({ closesAt }: { closesAt: Date }) {
+export function CountdownTimer({ closesAt, onExpire }: { closesAt: Date; onExpire?: () => void }) {
   const [remaining, setRemaining] = useState(() => closesAt.getTime() - Date.now())
+  const onExpireRef = useRef(onExpire)
+  onExpireRef.current = onExpire
+  const firedRef = useRef(false)
 
   useEffect(() => {
-    const interval = setInterval(() => setRemaining(closesAt.getTime() - Date.now()), 1000)
+    firedRef.current = false
+    const interval = setInterval(() => {
+      const r = closesAt.getTime() - Date.now()
+      setRemaining(r)
+      if (r <= 0 && !firedRef.current) {
+        firedRef.current = true
+        onExpireRef.current?.()
+      }
+    }, 1000)
     return () => clearInterval(interval)
   }, [closesAt])
 
