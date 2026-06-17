@@ -68,7 +68,7 @@ export default async function LeaderboardPage() {
             </CardHeader>
             <CardContent className="px-4 pb-3 pt-0">
               <p className="text-sm text-zinc-400">
-                {entries.length} {entries.length === 1 ? 'player has' : 'players have'} bet on lines with 2+ participants. Solo lines don&apos;t count.
+                {entries.length} {entries.length === 1 ? 'player has ' : 'players have '} bet on lines with 2+ participants. Solo lines don&apos;t count.
               </p>
             </CardContent>
           </Card>
