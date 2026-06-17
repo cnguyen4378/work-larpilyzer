@@ -209,10 +209,11 @@ export interface LeaderboardEntry {
   userId: string
   username: string
   wins: number
+  totalBets: number
+  winRatio: number
 }
 
 export async function getLeaderboard(supabase: SupabaseClient): Promise<LeaderboardEntry[]> {
-  // Fetch all resolved lines
   const { data: linesData, error: linesError } = await supabase
     .from('lines')
     .select('id, resolved_outcome')
@@ -221,7 +222,6 @@ export async function getLeaderboard(supabase: SupabaseClient): Promise<Leaderbo
   if (linesError) throw new Error(`Failed to fetch resolved lines: ${linesError.message}`)
   if (!linesData || linesData.length === 0) return []
 
-  // Fetch all bets on resolved lines, joined with users for username
   const lineIds = linesData.map((r) => r.id as string)
   const { data: betsData, error: betsError } = await supabase
     .from('bets')
@@ -230,31 +230,48 @@ export async function getLeaderboard(supabase: SupabaseClient): Promise<Leaderbo
 
   if (betsError) throw new Error(`Failed to fetch bets: ${betsError.message}`)
 
-  // Build a map of lineId → resolved_outcome for quick lookup
+  const allBets = betsData ?? []
+
+  // Group bets by line to filter out solo lines (< 2 bets)
+  const betsByLine = new Map<string, typeof allBets>()
+  for (const bet of allBets) {
+    const lid = bet.line_id as string
+    const arr = betsByLine.get(lid) ?? []
+    arr.push(bet)
+    betsByLine.set(lid, arr)
+  }
+
   const outcomeByLine = new Map<string, string>(
     linesData.map((r) => [r.id as string, r.resolved_outcome as string])
   )
 
-  // Count wins per user
-  const winsMap = new Map<string, { username: string; wins: number }>()
-  for (const bet of betsData ?? []) {
-    const resolvedOutcome = outcomeByLine.get(bet.line_id as string)
-    if (!resolvedOutcome || bet.side !== resolvedOutcome) continue
+  const statsMap = new Map<string, { username: string; wins: number; totalBets: number }>()
 
-    const userId = bet.user_id as string
-    const usersRow = bet.users as unknown as Record<string, unknown> | null
-    const username = (usersRow?.username as string) ?? ''
-    const entry = winsMap.get(userId)
-    if (entry) {
-      entry.wins += 1
-    } else {
-      winsMap.set(userId, { username, wins: 1 })
+  for (const [lineId, bets] of betsByLine) {
+    if (bets.length < 2) continue // ponytail: solo lines don't count
+    const outcome = outcomeByLine.get(lineId)
+    if (!outcome) continue
+
+    for (const bet of bets) {
+      const userId = bet.user_id as string
+      const usersRow = bet.users as unknown as Record<string, unknown> | null
+      const username = (usersRow?.username as string) ?? ''
+      const entry = statsMap.get(userId) ?? { username, wins: 0, totalBets: 0 }
+      entry.totalBets += 1
+      if (bet.side === outcome) entry.wins += 1
+      statsMap.set(userId, entry)
     }
   }
 
-  return Array.from(winsMap.entries())
-    .map(([userId, { username, wins }]) => ({ userId, username, wins }))
-    .sort((a, b) => b.wins - a.wins)
+  return Array.from(statsMap.entries())
+    .map(([userId, { username, wins, totalBets }]) => ({
+      userId,
+      username,
+      wins,
+      totalBets,
+      winRatio: totalBets > 0 ? wins / totalBets : 0,
+    }))
+    .sort((a, b) => b.winRatio - a.winRatio || b.wins - a.wins)
 }
 
 export async function deleteLine(supabase: SupabaseClient, lineId: string): Promise<void> {

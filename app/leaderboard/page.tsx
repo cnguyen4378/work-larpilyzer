@@ -44,9 +44,14 @@ export default async function LeaderboardPage() {
                       {isTopThree ? ['🥇', '🥈', '🥉'][rank - 1] : rank}
                     </span>
                     <span className="flex-1 font-semibold text-white">{entry.username}</span>
-                    <span className="text-sm font-bold text-zinc-300">
-                      {entry.wins} {entry.wins === 1 ? 'win' : 'wins'}
-                    </span>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-zinc-300">
+                        {entry.wins}/{entry.totalBets}
+                      </div>
+                      <div className="text-xs text-zinc-500">
+                        {Math.round(entry.winRatio * 100)}%
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               )
@@ -63,8 +68,7 @@ export default async function LeaderboardPage() {
             </CardHeader>
             <CardContent className="px-4 pb-3 pt-0">
               <p className="text-sm text-zinc-400">
-                {entries.length} {entries.length === 1 ? 'player has' : 'players have'} won at
-                least one bet.
+                {entries.length} {entries.length === 1 ? 'player has' : 'players have'} bet on lines with 2+ participants. Solo lines don&apos;t count.
               </p>
             </CardContent>
           </Card>
