@@ -6,6 +6,7 @@ import { CreateLineForm } from '@/components/betting/CreateLineForm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { createLine, createInviteLink, getLines, logout, placeBet, resolveLine } from '@/app/actions'
+import { useLineUpdates } from '@/lib/supabase/realtime'
 import type { BetSide, CreateLineInput, LineWithBets, User } from '@/types'
 
 interface HomeClientProps {
@@ -22,6 +23,8 @@ export function HomeClient({ initialLines, currentUser }: HomeClientProps) {
     const fresh = await getLines()
     setLines(fresh)
   }, [])
+
+  useLineUpdates(setLines)
 
   useEffect(() => {
     const interval = setInterval(refreshLines, 30_000)

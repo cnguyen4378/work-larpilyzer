@@ -1,6 +1,9 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getLeaderboard } from '@/lib/supabase/db'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { LeaderboardRefresher } from './LeaderboardRefresher'
+
+export const dynamic = 'force-dynamic'
 
 export default async function LeaderboardPage() {
   const supabase = createServiceRoleClient()
@@ -8,6 +11,7 @@ export default async function LeaderboardPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white pb-20">
+      <LeaderboardRefresher />
       <header className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
         <div className="mx-auto flex max-w-lg items-center px-4 py-3">
           <span className="text-lg font-black tracking-tight">LARPILYZER</span>
