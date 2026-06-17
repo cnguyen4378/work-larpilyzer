@@ -1,5 +1,6 @@
 'use server'
 
+import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
 import {
@@ -10,6 +11,7 @@ import {
   deleteLine as dbDeleteLine,
   getInviteLinkByToken,
   getLines as dbGetLines,
+  getResolvedLines as dbGetResolvedLines,
   getUserById,
   getUserByUsername,
   placeBet as dbPlaceBet,
@@ -99,6 +101,10 @@ export async function getLines(): Promise<LineWithBets[]> {
   return dbGetLines(createServiceRoleClient(), userId)
 }
 
+export async function getResolvedLines(): Promise<LineWithBets[]> {
+  return dbGetResolvedLines(createServiceRoleClient())
+}
+
 export async function loginByUsername(username: string): Promise<User> {
   const supabase = createServiceRoleClient()
   const user = await getUserByUsername(supabase, username)
@@ -126,4 +132,10 @@ export async function createInviteLink(userId: string): Promise<InviteLink> {
   const authedId = await getAuthenticatedUserId()
   if (authedId !== userId) throw new Error('Not authenticated.')
   return dbCreateInviteLink(createServiceRoleClient(), authedId)
+}
+
+export async function logout(): Promise<never> {
+  const cookieStore = await cookies()
+  cookieStore.delete('user_id')
+  redirect('/join')
 }

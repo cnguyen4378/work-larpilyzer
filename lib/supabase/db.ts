@@ -84,6 +84,7 @@ export async function getLines(supabase: SupabaseClient, currentUserId: string):
   const { data: linesData, error: linesError } = await supabase
     .from('lines')
     .select('*')
+    .neq('status', 'resolved')
     .order('created_at', { ascending: false })
 
   if (linesError) throw new Error(`Failed to fetch lines: ${linesError.message}`)
@@ -172,6 +173,88 @@ export async function closeLineEarly(supabase: SupabaseClient, lineId: string): 
   if (error) throw new Error(`Failed to close line: ${error.message}`)
   if (!row) throw new Error('Line is not open or does not exist.')
   return mapLine(row)
+}
+
+export async function getResolvedLines(supabase: SupabaseClient): Promise<LineWithBets[]> {
+  const { data: linesData, error: linesError } = await supabase
+    .from('lines')
+    .select('*')
+    .eq('status', 'resolved')
+    .order('resolved_at', { ascending: false })
+
+  if (linesError) throw new Error(`Failed to fetch resolved lines: ${linesError.message}`)
+
+  if (!linesData || linesData.length === 0) return []
+
+  const lineIds = linesData.map((r) => r.id as string)
+
+  const { data: betsData, error: betsError } = await supabase
+    .from('bets')
+    .select('*, users(username)')
+    .in('line_id', lineIds)
+
+  if (betsError) throw new Error(`Failed to fetch bets for resolved lines: ${betsError.message}`)
+
+  const bets: Bet[] = (betsData ?? []).map(mapBet)
+
+  return linesData.map((row) => {
+    const line = mapLine(row)
+    const lineBets = bets.filter((b) => b.lineId === line.id)
+    const summary = computeBetSummary(line, lineBets, '')
+    return { ...line, bets: lineBets, summary }
+  })
+}
+
+export interface LeaderboardEntry {
+  userId: string
+  username: string
+  wins: number
+}
+
+export async function getLeaderboard(supabase: SupabaseClient): Promise<LeaderboardEntry[]> {
+  // Fetch all resolved lines
+  const { data: linesData, error: linesError } = await supabase
+    .from('lines')
+    .select('id, resolved_outcome')
+    .eq('status', 'resolved')
+
+  if (linesError) throw new Error(`Failed to fetch resolved lines: ${linesError.message}`)
+  if (!linesData || linesData.length === 0) return []
+
+  // Fetch all bets on resolved lines, joined with users for username
+  const lineIds = linesData.map((r) => r.id as string)
+  const { data: betsData, error: betsError } = await supabase
+    .from('bets')
+    .select('user_id, side, line_id, users(username)')
+    .in('line_id', lineIds)
+
+  if (betsError) throw new Error(`Failed to fetch bets: ${betsError.message}`)
+
+  // Build a map of lineId → resolved_outcome for quick lookup
+  const outcomeByLine = new Map<string, string>(
+    linesData.map((r) => [r.id as string, r.resolved_outcome as string])
+  )
+
+  // Count wins per user
+  const winsMap = new Map<string, { username: string; wins: number }>()
+  for (const bet of betsData ?? []) {
+    const resolvedOutcome = outcomeByLine.get(bet.line_id as string)
+    if (!resolvedOutcome || bet.side !== resolvedOutcome) continue
+
+    const userId = bet.user_id as string
+    const usersRow = bet.users as unknown as Record<string, unknown> | null
+    const username = (usersRow?.username as string) ?? ''
+    const entry = winsMap.get(userId)
+    if (entry) {
+      entry.wins += 1
+    } else {
+      winsMap.set(userId, { username, wins: 1 })
+    }
+  }
+
+  return Array.from(winsMap.entries())
+    .map(([userId, { username, wins }]) => ({ userId, username, wins }))
+    .sort((a, b) => b.wins - a.wins)
 }
 
 export async function deleteLine(supabase: SupabaseClient, lineId: string): Promise<void> {

@@ -5,7 +5,7 @@ import { BetFeed } from '@/components/betting/BetFeed'
 import { CreateLineForm } from '@/components/betting/CreateLineForm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { createLine, createInviteLink, getLines, placeBet, resolveLine } from '@/app/actions'
+import { createLine, createInviteLink, getLines, logout, placeBet, resolveLine } from '@/app/actions'
 import type { BetSide, CreateLineInput, LineWithBets, User } from '@/types'
 
 interface HomeClientProps {
@@ -61,7 +61,14 @@ export function HomeClient({ initialLines, currentUser }: HomeClientProps) {
         <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
           <h1 className="text-lg font-black tracking-tight">LARPILYZER</h1>
           {currentUser ? (
-            <span className="text-sm text-zinc-400">{currentUser.username}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-zinc-400">{currentUser.username}</span>
+              <form action={logout}>
+                <button type="submit" className="text-xs text-zinc-600 hover:text-zinc-300">
+                  Logout
+                </button>
+              </form>
+            </div>
           ) : (
             <span className="text-sm text-zinc-600">Not joined</span>
           )}
